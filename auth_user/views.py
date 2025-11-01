@@ -4,9 +4,13 @@ from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
+from rest_framework.permissions import AllowAny
+
 # Create your views here.
 
 class LoginView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny] 
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
