@@ -1,45 +1,60 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
+from django.db import IntegrityError, transaction
 from rest_framework import status
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import Kinesiologist 
+from .models import Kinesiologist
 from .serializers import KinesiologistSerializer
 
-class kinesiologistListCreateView(APIView):
+
+class KinesiologistListCreateView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        print("USER:", request.user)
-        print("AUTH:", request.auth)
-        kinesiologist = Kinesiologist.objects.all()
-        serializer = KinesiologistSerializer(kinesiologist, many=True)
-        return Response(serializer.data)
-    
-    def post (self, request):
-        print("USER:", request.user)
-        print("AUTH:", request.auth)
-        if not request.user.is_superuser:
-            return Response({"status":False, "message":"No Autorizado"}, status=403)
-        
-        serializer = KinesiologistSerializer(data=request.data)
+        try:
+            kinesiologists = Kinesiologist.objects.select_related('user').order_by('name')
+            serializer = KinesiologistSerializer(kinesiologists, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception:
+            return Response(
+                {
+                    "status": False,
+                    "message": "No se pudo obtener la lista de kinesiólogos en este momento.",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        if serializer.is_valid():
-            kine = serializer.save(user=request.user)
-            return Response({
-                            "status": True,
-                            "user": {
-                                "id": kine.id,
-                                "name": kine.name,
-                                "rut": kine.rut,
-                                "email":kine.user.email,
-                                "specialty": kine.specialty,
-                                "phone_number": kine.phone_number,
-                                "box": kine.box,
-                                "image_url": kine.image_url
-                            }
-                        })
-        
-        return Response(serializer.errors, status=400)
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response(
+                {"status": False, "message": "No tiene permisos para realizar esta acción."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = KinesiologistSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            with transaction.atomic():
+                kinesiologist = serializer.save()
+        except IntegrityError:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Ocurrió un problema al crear el kinesiólogo. Intente nuevamente.",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response_serializer = KinesiologistSerializer(kinesiologist)
+        return Response(
+            {
+                "status": True,
+                "message": "Kinesiólogo creado correctamente.",
+                "kinesiologist": response_serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
