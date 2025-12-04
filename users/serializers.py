@@ -8,7 +8,7 @@ class PatientRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Patient
-        fields = ['name','rut','email','password','diagnostic','phone_number']
+        fields = ['name','rut','email','password','phone_number']
 
     def validate(self, data):    
             if User.objects.filter(email=data["email"]).exists():

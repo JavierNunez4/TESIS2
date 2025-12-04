@@ -18,8 +18,8 @@ class KinesiologistSerializer(serializers.ModelSerializer):
             'specialty',
             'phone_number',
             'box',
-            'image_url',
             'email',
+            'description',
             'generated_password',
         ]
         read_only_fields = ['id', 'generated_password']
@@ -37,6 +37,11 @@ class KinesiologistSerializer(serializers.ModelSerializer):
     def validate_box(self, value: str) -> str:
         if not value.strip():
             raise serializers.ValidationError("El box es obligatorio.")
+        return value
+    
+    def validate_description(self, value: str) -> str:
+        if not value.strip():
+            raise serializers.ValidationError("La Descripción es obligatorio.")
         return value
 
     def create(self, validated_data):

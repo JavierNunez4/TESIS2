@@ -9,6 +9,7 @@ class Kinesiologist(models.Model):
     specialty = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=10)
     box = models.CharField(max_length=10)
+    description = models.CharField(max_length=250, default="")
     image_url = models.CharField(max_length=100)
 
     def __str__(self) -> str:
